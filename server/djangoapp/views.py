@@ -1,19 +1,19 @@
 # Uncomment the required imports before adding the code
 
-# from django.shortcuts import render
-# from django.http import HttpResponseRedirect, HttpResponse
-# from django.contrib.auth.models import User
-# from django.shortcuts import get_object_or_404, render, redirect
-# from django.contrib.auth import logout
-# from django.contrib import messages
-# from datetime import datetime
+from django.shortcuts import render
+from django.http import HttpResponseRedirect, HttpResponse
+from django.contrib.auth.models import User
+from django.shortcuts import get_object_or_404, render, redirect
+from django.contrib.auth import logout
+from django.contrib import messages
+from datetime import datetime
 
 from django.http import JsonResponse
 from django.contrib.auth import login, authenticate
 import logging
 import json
 from django.views.decorators.csrf import csrf_exempt
-# from .populate import initiate
+from .populate import initiate
 
 
 # Get an instance of a logger
@@ -39,13 +39,60 @@ def login_user(request):
     return JsonResponse(data)
 
 # Create a `logout_request` view to handle sign out request
-# def logout_request(request):
-# ...
+def logout_request(request):
+    username = request.user.username
+    logout(request)
+    data = {"userName": username}
+    return JsonResponse(data)
 
 # Create a `registration` view to handle sign up request
-# @csrf_exempt
-# def registration(request):
-# ...
+@csrf_exempt
+def registration(request):
+    if request.method != "POST":
+        return JsonResponse({"error": "Invalid request method. Only POST is allowed."}, status=405)
+
+    try:
+        # Parse the JSON body
+        data = json.loads(request.body)
+    except json.JSONDecodeError:
+        return JsonResponse({"error": "Invalid JSON input."}, status=400)
+
+    # Extract the fields
+    username = data.get("userName")
+    password = data.get("password")
+    first_name = data.get("firstName", "")
+    last_name = data.get("lastName", "")
+    email = data.get("email")
+
+    # Check for required fields
+    if not username or not password or not email:
+        return JsonResponse({"error": "All fields are required."}, status=400)
+
+    if User.objects.filter(username=username).exists():
+        return JsonResponse({"error": "Username already exists."}, status=400)
+
+    try:
+        # Create the user
+        user = User.objects.create_user(
+            username=username,
+            password=password,
+            first_name=first_name,
+            last_name=last_name,
+            email=email,
+        )
+
+        login(request, user)
+
+        return JsonResponse(
+            {"status": True, "userName": username, "Authenticated": True},
+            status=201
+        )
+    except Exception as e:
+        return JsonResponse(
+            {"error": f"An unexpected error occurred: {str(e)}"},
+            status=500
+        )
+
 
 # # Update the `get_dealerships` view to render the index page with
 # a list of dealerships
