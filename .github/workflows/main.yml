@@ -1,9 +1,11 @@
 name: 'Lint Code'
+
 on:
   push:
     branches: [master, main]
   pull_request:
     branches: [master, main]
+
 jobs:
   lint_python:
     name: Lint Python Files
@@ -11,37 +13,74 @@ jobs:
     steps:
     - name: Checkout Repository
       uses: actions/checkout@v3
-    
+
     - name: Set up Python
       uses: actions/setup-python@v4
       with:
         python-version: 3.12
+
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
         pip install flake8
-    - name: Print working directory
-      run: pwd
-    - name: Run Linter
+
+    - name: Run Python Linter
+      id: lint_python
       run: |
-        pwd
-        # This command finds all Python files recursively and runs flake8 on them
-        find . -name "*.py" -exec flake8 {} +
-        echo "Linted all the python files successfully"
+        echo "Running Python linting..."
+        flake8 --output-file=python-lint-report.txt || true
+        # Count total and failed files
+        TOTAL=$(find . -name "*.py" | wc -l)
+        FAILS=$(cat python-lint-report.txt | wc -l)
+        echo "Total Python files: $TOTAL, Fails: $FAILS"
+        # Calculate pass rate
+        PASS_RATE=$(( 100 * (TOTAL - FAILS) / TOTAL ))
+        echo "Python Pass Rate: $PASS_RATE%" >> python-lint-report.txt
+        if [ "$PASS_RATE" -lt 70 ]; then
+          echo "Python linting failed. Pass rate below 70% ($PASS_RATE%)"
+          exit 1
+        fi
+
+    - name: Upload Lint Report
+      uses: actions/upload-artifact@v3
+      with:
+        name: python-lint-report
+        path: python-lint-report.txt
+
   lint_js:
-      name: Lint JavaScript Files
-      runs-on: ubuntu-latest
-      steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v3
-      - name: Install Node.js
-        uses: actions/setup-node@v3
-        with:
-          node-version: 14
-      - name: Install JSHint
-        run: npm install jshint --global
-      - name: Run Linter
-        run: |
-          # This command finds all JavaScript files recursively and runs JSHint on them
-          find ./server/database -name "*.js" -exec jshint {} +
-          echo "Linted all the js files successfully"
+    name: Lint JavaScript Files
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v3
+
+    - name: Install Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: 16
+
+    - name: Install JSHint
+      run: npm install jshint --global
+
+    - name: Run JavaScript Linter
+      id: lint_js
+      run: |
+        echo "Running JavaScript linting..."
+        find ./server/database -name "*.js" -exec jshint {} + > js-lint-report.txt || true
+        # Count total and failed files
+        TOTAL=$(find ./server/database -name "*.js" | wc -l)
+        FAILS=$(grep -c "Error" js-lint-report.txt || true)
+        echo "Total JavaScript files: $TOTAL, Fails: $FAILS"
+        # Calculate pass rate
+        PASS_RATE=$(( 100 * (TOTAL - FAILS) / TOTAL ))
+        echo "JavaScript Pass Rate: $PASS_RATE%" >> js-lint-report.txt
+        if [ "$PASS_RATE" -lt 70 ]; then
+          echo "JavaScript linting failed. Pass rate below 70% ($PASS_RATE%)"
+          exit 1
+        fi
+
+    - name: Upload Lint Report
+      uses: actions/upload-artifact@v3
+      with:
+        name: js-lint-report
+        path: js-lint-report.txt
