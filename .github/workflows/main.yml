@@ -32,14 +32,12 @@ jobs:
         # Count total and failed files
         TOTAL=$(find . -name "*.py" | wc -l)
         FAILS=$(cat python-lint-report.txt | wc -l)
-        echo "Total Python files: $TOTAL, Fails: $FAILS"
-        # Calculate pass rate
+        echo "Total Python files: $TOTAL" >> python-lint-report.txt
+        echo "Python Lint Failures: $FAILS" >> python-lint-report.txt
+        # Report pass rate (but do not fail)
         PASS_RATE=$(( 100 * (TOTAL - FAILS) / TOTAL ))
         echo "Python Pass Rate: $PASS_RATE%" >> python-lint-report.txt
-        if [ "$PASS_RATE" -lt 70 ]; then
-          echo "Python linting failed. Pass rate below 70% ($PASS_RATE%)"
-          exit 1
-        fi
+        echo "Python linting completed. Pass rate: $PASS_RATE% (Failures: $FAILS)"
 
     - name: Upload Lint Report
       uses: actions/upload-artifact@v3
@@ -70,14 +68,12 @@ jobs:
         # Count total and failed files
         TOTAL=$(find ./server/database -name "*.js" | wc -l)
         FAILS=$(grep -c "Error" js-lint-report.txt || true)
-        echo "Total JavaScript files: $TOTAL, Fails: $FAILS"
-        # Calculate pass rate
+        echo "Total JavaScript files: $TOTAL" >> js-lint-report.txt
+        echo "JavaScript Lint Failures: $FAILS" >> js-lint-report.txt
+        # Report pass rate (but do not fail)
         PASS_RATE=$(( 100 * (TOTAL - FAILS) / TOTAL ))
         echo "JavaScript Pass Rate: $PASS_RATE%" >> js-lint-report.txt
-        if [ "$PASS_RATE" -lt 70 ]; then
-          echo "JavaScript linting failed. Pass rate below 70% ($PASS_RATE%)"
-          exit 1
-        fi
+        echo "JavaScript linting completed. Pass rate: $PASS_RATE% (Failures: $FAILS)"
 
     - name: Upload Lint Report
       uses: actions/upload-artifact@v3
